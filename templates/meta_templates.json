@@ -1,0 +1,53 @@
+{
+  "_comment": "Template definitions in Meta Graph API format (POST /{WHATSAPP_BUSINESS_ACCOUNT_ID}/message_templates). The easiest way to create them is WhatsApp Manager > Message templates > Create template - see templates/WHATSAPP_TEMPLATES.md.",
+  "templates": [
+    {
+      "name": "employee_birthday",
+      "language": "en",
+      "category": "MARKETING",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Happy Birthday, {{1}}! 🎉\nWishing you a wonderful day and a great year ahead.\nBest wishes from 7X.",
+          "example": { "body_text": [["Ahmed"]] }
+        }
+      ]
+    },
+    {
+      "name": "work_anniversary",
+      "language": "en",
+      "category": "MARKETING",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Congratulations, {{1}}, on completing {{2}} years with 7X! 🎉\nThank you for being part of our journey.",
+          "example": { "body_text": [["Sara", "4"]] }
+        }
+      ]
+    },
+    {
+      "name": "employee_birthday_ar",
+      "language": "ar",
+      "category": "MARKETING",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "عيد ميلاد سعيد يا {{1}}! 🎉\nنتمنى لك يوماً رائعاً وعاماً مليئاً بالخير والنجاح.\nمع أطيب التمنيات من 7X.",
+          "example": { "body_text": [["أحمد"]] }
+        }
+      ]
+    },
+    {
+      "name": "work_anniversary_ar",
+      "language": "ar",
+      "category": "MARKETING",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "تهانينا يا {{1}} بمناسبة إكمال عامك رقم {{2}} مع 7X! 🎉\nشكراً لكونك جزءاً من رحلتنا.",
+          "example": { "body_text": [["سارة", "4"]] }
+        }
+      ]
+    }
+  ]
+}

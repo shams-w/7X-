@@ -1,0 +1,8 @@
+# Runtime
+requests>=2.31,<3
+openpyxl>=3.1,<4
+python-dotenv>=1.0,<2
+tzdata>=2024.1          # timezone database (needed on Windows for Asia/Dubai)
+
+# Tests
+pytest>=8,<10

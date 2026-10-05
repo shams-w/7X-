@@ -1,0 +1,788 @@
+{
+  "name": "7X Executive Connect - Daily Celebrations",
+  "flow": [
+    {
+      "id": 1,
+      "module": "util:SetVariables",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "scope": "roundtrip",
+        "variables": [
+          {
+            "name": "APP_MODE",
+            "value": "TEST"
+          },
+          {
+            "name": "TEST_PHONE_NUMBER",
+            "value": "TEST_PHONE_NUMBER"
+          },
+          {
+            "name": "TODAY_MMDD",
+            "value": "{{formatDate(now; \"MM-DD\"; \"Asia/Dubai\")}}"
+          },
+          {
+            "name": "TODAY_ISO",
+            "value": "{{formatDate(now; \"YYYY-MM-DD\"; \"Asia/Dubai\")}}"
+          },
+          {
+            "name": "THIS_YEAR",
+            "value": "{{formatDate(now; \"YYYY\"; \"Asia/Dubai\")}}"
+          },
+          {
+            "name": "NOW_TEXT",
+            "value": "{{formatDate(now; \"YYYY-MM-DD HH:mm\"; \"Asia/Dubai\")}}"
+          }
+        ]
+      },
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "notes": "CONFIG - set APP_MODE and TEST_PHONE_NUMBER here"
+      }
+    },
+    {
+      "id": 2,
+      "module": "microsoft-excel:listWorksheetRows",
+      "version": 2,
+      "parameters": {
+        "__IMTCONN__": "EXCEL_CONNECTION_ID"
+      },
+      "mapper": {
+        "drive": "ONEDRIVE_OR_SHAREPOINT_DRIVE_ID",
+        "workbook": "SPREADSHEET_ID",
+        "worksheet": "Employees",
+        "headerRow": true,
+        "limit": 3000
+      },
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 3,
+      "module": "util:SetVariables",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "scope": "roundtrip",
+        "variables": [
+          {
+            "name": "employee_id",
+            "value": "{{trim(2.`0`)}}"
+          },
+          {
+            "name": "name",
+            "value": "{{trim(2.`1`)}}"
+          },
+          {
+            "name": "phone",
+            "value": "{{replace(2.`2`; \" \"; emptystring)}}"
+          },
+          {
+            "name": "consent",
+            "value": "{{upper(trim(2.`5`))}}"
+          },
+          {
+            "name": "active",
+            "value": "{{upper(trim(2.`6`))}}"
+          },
+          {
+            "name": "birthday_mmdd",
+            "value": "{{2.`14`}}"
+          },
+          {
+            "name": "joining_mmdd",
+            "value": "{{2.`15`}}"
+          },
+          {
+            "name": "joining_year",
+            "value": "{{2.`16`}}"
+          },
+          {
+            "name": "birthday_sent_year",
+            "value": "{{2.`8`}}"
+          },
+          {
+            "name": "anniversary_sent_year",
+            "value": "{{2.`9`}}"
+          },
+          {
+            "name": "row_no",
+            "value": "{{2.`17`}}"
+          },
+          {
+            "name": "recipient",
+            "value": "{{if(1.APP_MODE = \"PRODUCTION\"; replace(2.`2`; \" \"; emptystring); 1.TEST_PHONE_NUMBER)}}"
+          },
+          {
+            "name": "recipient_masked",
+            "value": "{{if(1.APP_MODE = \"PRODUCTION\"; substring(2.`2`; 0; 6) + \"****\"; \"TEST\")}}"
+          }
+        ]
+      },
+      "filter": {
+        "name": "Has an Employee_ID",
+        "conditions": [
+          [
+            {
+              "a": "{{2.`0`}}",
+              "o": "exist"
+            }
+          ]
+        ]
+      },
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        },
+        "notes": "EMPLOYEE ROW - the only module that reads Excel columns"
+      }
+    },
+    {
+      "id": 4,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "filter": {
+        "name": "Active = YES AND Consent = YES AND phone starts with +",
+        "conditions": [
+          [
+            {
+              "a": "{{3.active}}",
+              "o": "text:equal",
+              "b": "YES"
+            },
+            {
+              "a": "{{3.consent}}",
+              "o": "text:equal",
+              "b": "YES"
+            },
+            {
+              "a": "{{3.phone}}",
+              "o": "text:startwith",
+              "b": "+"
+            }
+          ]
+        ]
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 10,
+              "module": "datastore:GetRecord",
+              "version": 1,
+              "parameters": {
+                "datastore": "DATASTORE_ID"
+              },
+              "mapper": {
+                "key": "{{1.APP_MODE}}_{{3.employee_id}}_BIRTHDAY_{{1.THIS_YEAR}}"
+              },
+              "filter": {
+                "name": "Birthday today and not yet sent this year",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{3.birthday_mmdd}}",
+                      "o": "text:equal",
+                      "b": "{{1.TODAY_MMDD}}"
+                    },
+                    {
+                      "a": "{{3.birthday_sent_year}}",
+                      "o": "text:notequal",
+                      "b": "{{1.THIS_YEAR}}"
+                    }
+                  ]
+                ]
+              },
+              "metadata": {
+                "designer": {
+                  "x": 1500,
+                  "y": -300
+                },
+                "notes": "Birthday: duplicate check"
+              }
+            },
+            {
+              "id": 11,
+              "module": "datastore:AddRecord",
+              "version": 1,
+              "parameters": {
+                "datastore": "DATASTORE_ID"
+              },
+              "mapper": {
+                "key": "{{1.APP_MODE}}_{{3.employee_id}}_BIRTHDAY_{{1.THIS_YEAR}}",
+                "overwrite": false,
+                "data": {
+                  "event_id": "{{3.employee_id}}_BIRTHDAY_{{1.THIS_YEAR}}",
+                  "employee_id": "{{3.employee_id}}",
+                  "event_type": "BIRTHDAY",
+                  "event_year": "{{1.THIS_YEAR}}",
+                  "mode": "{{1.APP_MODE}}",
+                  "status": "PENDING",
+                  "created_at": "{{1.NOW_TEXT}}"
+                }
+              },
+              "filter": {
+                "name": "Not sent before (no record)",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{10.status}}",
+                      "o": "notexist"
+                    }
+                  ]
+                ]
+              },
+              "onerror": [
+                {
+                  "id": 20,
+                  "module": "builtin:Ignore",
+                  "version": 1,
+                  "metadata": {
+                    "designer": {
+                      "x": 1800,
+                      "y": 0
+                    }
+                  }
+                }
+              ],
+              "metadata": {
+                "designer": {
+                  "x": 1800,
+                  "y": -300
+                }
+              }
+            },
+            {
+              "id": 12,
+              "module": "whatsapp-business-cloud:sendTemplateMessage",
+              "version": 1,
+              "parameters": {
+                "__IMTCONN__": "WHATSAPP_CONNECTION_ID"
+              },
+              "mapper": {
+                "senderId": "WHATSAPP_PHONE_NUMBER_ID",
+                "to": "{{3.recipient}}",
+                "template": "employee_birthday",
+                "language": "en",
+                "bodyParameters": [
+                  {
+                    "type": "text",
+                    "text": "{{3.name}}"
+                  }
+                ]
+              },
+              "onerror": [
+                {
+                  "id": 16,
+                  "module": "datastore:DeleteRecord",
+                  "version": 1,
+                  "parameters": {
+                    "datastore": "DATASTORE_ID"
+                  },
+                  "mapper": {
+                    "key": "{{1.APP_MODE}}_{{3.employee_id}}_BIRTHDAY_{{1.THIS_YEAR}}"
+                  },
+                  "metadata": {
+                    "designer": {
+                      "x": 2100,
+                      "y": 0
+                    }
+                  }
+                },
+                {
+                  "id": 17,
+                  "module": "microsoft-excel:updateWorksheetRow",
+                  "version": 2,
+                  "parameters": {
+                    "__IMTCONN__": "EXCEL_CONNECTION_ID"
+                  },
+                  "mapper": {
+                    "drive": "ONEDRIVE_OR_SHAREPOINT_DRIVE_ID",
+                    "workbook": "SPREADSHEET_ID",
+                    "worksheet": "Employees",
+                    "rowNumber": "{{3.row_no}}",
+                    "values": {
+                      "12": "FAILED",
+                      "13": "{{error.message}}"
+                    }
+                  },
+                  "metadata": {
+                    "designer": {
+                      "x": 2400,
+                      "y": 0
+                    }
+                  }
+                },
+                {
+                  "id": 18,
+                  "module": "microsoft-excel:addWorksheetRow",
+                  "version": 2,
+                  "parameters": {
+                    "__IMTCONN__": "EXCEL_CONNECTION_ID"
+                  },
+                  "mapper": {
+                    "drive": "ONEDRIVE_OR_SHAREPOINT_DRIVE_ID",
+                    "workbook": "SPREADSHEET_ID",
+                    "worksheet": "Event_Log",
+                    "values": {
+                      "0": "{{3.employee_id}}_BIRTHDAY_{{1.THIS_YEAR}}",
+                      "1": "{{3.employee_id}}",
+                      "2": "BIRTHDAY",
+                      "3": "{{1.THIS_YEAR}}",
+                      "4": "{{1.TODAY_ISO}}",
+                      "5": "{{1.APP_MODE}}",
+                      "6": "{{3.recipient_masked}}",
+                      "8": "FAILED",
+                      "9": "{{1.NOW_TEXT}}",
+                      "11": "{{error.message}}"
+                    }
+                  },
+                  "metadata": {
+                    "designer": {
+                      "x": 2700,
+                      "y": 0
+                    }
+                  }
+                },
+                {
+                  "id": 19,
+                  "module": "builtin:Ignore",
+                  "version": 1,
+                  "metadata": {
+                    "designer": {
+                      "x": 3000,
+                      "y": 0
+                    }
+                  }
+                }
+              ],
+              "metadata": {
+                "designer": {
+                  "x": 2100,
+                  "y": -300
+                }
+              }
+            },
+            {
+              "id": 13,
+              "module": "datastore:AddRecord",
+              "version": 1,
+              "parameters": {
+                "datastore": "DATASTORE_ID"
+              },
+              "mapper": {
+                "key": "{{1.APP_MODE}}_{{3.employee_id}}_BIRTHDAY_{{1.THIS_YEAR}}",
+                "overwrite": true,
+                "data": {
+                  "event_id": "{{3.employee_id}}_BIRTHDAY_{{1.THIS_YEAR}}",
+                  "employee_id": "{{3.employee_id}}",
+                  "event_type": "BIRTHDAY",
+                  "event_year": "{{1.THIS_YEAR}}",
+                  "mode": "{{1.APP_MODE}}",
+                  "status": "SENT",
+                  "message_id": "{{12.messages[1].id}}",
+                  "created_at": "{{1.NOW_TEXT}}"
+                }
+              },
+              "metadata": {
+                "designer": {
+                  "x": 2400,
+                  "y": -300
+                }
+              }
+            },
+            {
+              "id": 14,
+              "module": "microsoft-excel:updateWorksheetRow",
+              "version": 2,
+              "parameters": {
+                "__IMTCONN__": "EXCEL_CONNECTION_ID"
+              },
+              "mapper": {
+                "drive": "ONEDRIVE_OR_SHAREPOINT_DRIVE_ID",
+                "workbook": "SPREADSHEET_ID",
+                "worksheet": "Employees",
+                "rowNumber": "{{3.row_no}}",
+                "values": {
+                  "8": "{{if(1.APP_MODE = \"PRODUCTION\"; 1.THIS_YEAR; 3.birthday_sent_year)}}",
+                  "10": "Birthday",
+                  "11": "{{1.NOW_TEXT}}",
+                  "12": "{{if(1.APP_MODE = \"PRODUCTION\"; \"SENT\"; \"TEST_SENT\")}}",
+                  "13": ""
+                }
+              },
+              "metadata": {
+                "designer": {
+                  "x": 2700,
+                  "y": -300
+                }
+              }
+            },
+            {
+              "id": 15,
+              "module": "microsoft-excel:addWorksheetRow",
+              "version": 2,
+              "parameters": {
+                "__IMTCONN__": "EXCEL_CONNECTION_ID"
+              },
+              "mapper": {
+                "drive": "ONEDRIVE_OR_SHAREPOINT_DRIVE_ID",
+                "workbook": "SPREADSHEET_ID",
+                "worksheet": "Event_Log",
+                "values": {
+                  "0": "{{3.employee_id}}_BIRTHDAY_{{1.THIS_YEAR}}",
+                  "1": "{{3.employee_id}}",
+                  "2": "BIRTHDAY",
+                  "3": "{{1.THIS_YEAR}}",
+                  "4": "{{1.TODAY_ISO}}",
+                  "5": "{{1.APP_MODE}}",
+                  "6": "{{3.recipient_masked}}",
+                  "7": "{{12.messages[1].id}}",
+                  "8": "SENT",
+                  "9": "{{1.NOW_TEXT}}",
+                  "10": "{{1.NOW_TEXT}}"
+                }
+              },
+              "metadata": {
+                "designer": {
+                  "x": 3000,
+                  "y": -300
+                }
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 30,
+              "module": "datastore:GetRecord",
+              "version": 1,
+              "parameters": {
+                "datastore": "DATASTORE_ID"
+              },
+              "mapper": {
+                "key": "{{1.APP_MODE}}_{{3.employee_id}}_ANNIVERSARY_{{1.THIS_YEAR}}"
+              },
+              "filter": {
+                "name": "Anniversary today, >= 1 year, not yet sent this year",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{3.joining_mmdd}}",
+                      "o": "text:equal",
+                      "b": "{{1.TODAY_MMDD}}"
+                    },
+                    {
+                      "a": "{{1.THIS_YEAR - 3.joining_year}}",
+                      "o": "number:greaterorequal",
+                      "b": "1"
+                    },
+                    {
+                      "a": "{{3.anniversary_sent_year}}",
+                      "o": "text:notequal",
+                      "b": "{{1.THIS_YEAR}}"
+                    }
+                  ]
+                ]
+              },
+              "metadata": {
+                "designer": {
+                  "x": 1500,
+                  "y": 300
+                },
+                "notes": "Anniversary: duplicate check"
+              }
+            },
+            {
+              "id": 31,
+              "module": "datastore:AddRecord",
+              "version": 1,
+              "parameters": {
+                "datastore": "DATASTORE_ID"
+              },
+              "mapper": {
+                "key": "{{1.APP_MODE}}_{{3.employee_id}}_ANNIVERSARY_{{1.THIS_YEAR}}",
+                "overwrite": false,
+                "data": {
+                  "event_id": "{{3.employee_id}}_ANNIVERSARY_{{1.THIS_YEAR}}",
+                  "employee_id": "{{3.employee_id}}",
+                  "event_type": "ANNIVERSARY",
+                  "event_year": "{{1.THIS_YEAR}}",
+                  "mode": "{{1.APP_MODE}}",
+                  "status": "PENDING",
+                  "created_at": "{{1.NOW_TEXT}}"
+                }
+              },
+              "filter": {
+                "name": "Not sent before (no record)",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{30.status}}",
+                      "o": "notexist"
+                    }
+                  ]
+                ]
+              },
+              "onerror": [
+                {
+                  "id": 40,
+                  "module": "builtin:Ignore",
+                  "version": 1,
+                  "metadata": {
+                    "designer": {
+                      "x": 1800,
+                      "y": 600
+                    }
+                  }
+                }
+              ],
+              "metadata": {
+                "designer": {
+                  "x": 1800,
+                  "y": 300
+                }
+              }
+            },
+            {
+              "id": 32,
+              "module": "whatsapp-business-cloud:sendTemplateMessage",
+              "version": 1,
+              "parameters": {
+                "__IMTCONN__": "WHATSAPP_CONNECTION_ID"
+              },
+              "mapper": {
+                "senderId": "WHATSAPP_PHONE_NUMBER_ID",
+                "to": "{{3.recipient}}",
+                "template": "work_anniversary",
+                "language": "en",
+                "bodyParameters": [
+                  {
+                    "type": "text",
+                    "text": "{{3.name}}"
+                  },
+                  {
+                    "type": "text",
+                    "text": "{{1.THIS_YEAR - 3.joining_year}}"
+                  }
+                ]
+              },
+              "onerror": [
+                {
+                  "id": 36,
+                  "module": "datastore:DeleteRecord",
+                  "version": 1,
+                  "parameters": {
+                    "datastore": "DATASTORE_ID"
+                  },
+                  "mapper": {
+                    "key": "{{1.APP_MODE}}_{{3.employee_id}}_ANNIVERSARY_{{1.THIS_YEAR}}"
+                  },
+                  "metadata": {
+                    "designer": {
+                      "x": 2100,
+                      "y": 600
+                    }
+                  }
+                },
+                {
+                  "id": 37,
+                  "module": "microsoft-excel:updateWorksheetRow",
+                  "version": 2,
+                  "parameters": {
+                    "__IMTCONN__": "EXCEL_CONNECTION_ID"
+                  },
+                  "mapper": {
+                    "drive": "ONEDRIVE_OR_SHAREPOINT_DRIVE_ID",
+                    "workbook": "SPREADSHEET_ID",
+                    "worksheet": "Employees",
+                    "rowNumber": "{{3.row_no}}",
+                    "values": {
+                      "12": "FAILED",
+                      "13": "{{error.message}}"
+                    }
+                  },
+                  "metadata": {
+                    "designer": {
+                      "x": 2400,
+                      "y": 600
+                    }
+                  }
+                },
+                {
+                  "id": 38,
+                  "module": "microsoft-excel:addWorksheetRow",
+                  "version": 2,
+                  "parameters": {
+                    "__IMTCONN__": "EXCEL_CONNECTION_ID"
+                  },
+                  "mapper": {
+                    "drive": "ONEDRIVE_OR_SHAREPOINT_DRIVE_ID",
+                    "workbook": "SPREADSHEET_ID",
+                    "worksheet": "Event_Log",
+                    "values": {
+                      "0": "{{3.employee_id}}_ANNIVERSARY_{{1.THIS_YEAR}}",
+                      "1": "{{3.employee_id}}",
+                      "2": "ANNIVERSARY",
+                      "3": "{{1.THIS_YEAR}}",
+                      "4": "{{1.TODAY_ISO}}",
+                      "5": "{{1.APP_MODE}}",
+                      "6": "{{3.recipient_masked}}",
+                      "8": "FAILED",
+                      "9": "{{1.NOW_TEXT}}",
+                      "11": "{{error.message}}"
+                    }
+                  },
+                  "metadata": {
+                    "designer": {
+                      "x": 2700,
+                      "y": 600
+                    }
+                  }
+                },
+                {
+                  "id": 39,
+                  "module": "builtin:Ignore",
+                  "version": 1,
+                  "metadata": {
+                    "designer": {
+                      "x": 3000,
+                      "y": 600
+                    }
+                  }
+                }
+              ],
+              "metadata": {
+                "designer": {
+                  "x": 2100,
+                  "y": 300
+                }
+              }
+            },
+            {
+              "id": 33,
+              "module": "datastore:AddRecord",
+              "version": 1,
+              "parameters": {
+                "datastore": "DATASTORE_ID"
+              },
+              "mapper": {
+                "key": "{{1.APP_MODE}}_{{3.employee_id}}_ANNIVERSARY_{{1.THIS_YEAR}}",
+                "overwrite": true,
+                "data": {
+                  "event_id": "{{3.employee_id}}_ANNIVERSARY_{{1.THIS_YEAR}}",
+                  "employee_id": "{{3.employee_id}}",
+                  "event_type": "ANNIVERSARY",
+                  "event_year": "{{1.THIS_YEAR}}",
+                  "mode": "{{1.APP_MODE}}",
+                  "status": "SENT",
+                  "message_id": "{{32.messages[1].id}}",
+                  "created_at": "{{1.NOW_TEXT}}"
+                }
+              },
+              "metadata": {
+                "designer": {
+                  "x": 2400,
+                  "y": 300
+                }
+              }
+            },
+            {
+              "id": 34,
+              "module": "microsoft-excel:updateWorksheetRow",
+              "version": 2,
+              "parameters": {
+                "__IMTCONN__": "EXCEL_CONNECTION_ID"
+              },
+              "mapper": {
+                "drive": "ONEDRIVE_OR_SHAREPOINT_DRIVE_ID",
+                "workbook": "SPREADSHEET_ID",
+                "worksheet": "Employees",
+                "rowNumber": "{{3.row_no}}",
+                "values": {
+                  "9": "{{if(1.APP_MODE = \"PRODUCTION\"; 1.THIS_YEAR; 3.anniversary_sent_year)}}",
+                  "10": "Anniversary",
+                  "11": "{{1.NOW_TEXT}}",
+                  "12": "{{if(1.APP_MODE = \"PRODUCTION\"; \"SENT\"; \"TEST_SENT\")}}",
+                  "13": ""
+                }
+              },
+              "metadata": {
+                "designer": {
+                  "x": 2700,
+                  "y": 300
+                }
+              }
+            },
+            {
+              "id": 35,
+              "module": "microsoft-excel:addWorksheetRow",
+              "version": 2,
+              "parameters": {
+                "__IMTCONN__": "EXCEL_CONNECTION_ID"
+              },
+              "mapper": {
+                "drive": "ONEDRIVE_OR_SHAREPOINT_DRIVE_ID",
+                "workbook": "SPREADSHEET_ID",
+                "worksheet": "Event_Log",
+                "values": {
+                  "0": "{{3.employee_id}}_ANNIVERSARY_{{1.THIS_YEAR}}",
+                  "1": "{{3.employee_id}}",
+                  "2": "ANNIVERSARY",
+                  "3": "{{1.THIS_YEAR}}",
+                  "4": "{{1.TODAY_ISO}}",
+                  "5": "{{1.APP_MODE}}",
+                  "6": "{{3.recipient_masked}}",
+                  "7": "{{32.messages[1].id}}",
+                  "8": "SENT",
+                  "9": "{{1.NOW_TEXT}}",
+                  "10": "{{1.NOW_TEXT}}"
+                }
+              },
+              "metadata": {
+                "designer": {
+                  "x": 3000,
+                  "y": 300
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "metadata": {
+        "designer": {
+          "x": 900,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "instant": false,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": true,
+      "confidential": true,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    },
+    "zone": "eu1.make.com"
+  }
+}

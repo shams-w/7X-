@@ -1,0 +1,35 @@
+# ---- Secrets: never commit ----
+.env
+.env.*
+!.env.example
+secrets/*
+*.pem
+*.key
+
+# ---- Employee personal data: never commit ----
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+employee_data/
+# The ONLY spreadsheet allowed in git: fake sample data
+!sample_data/7X_Employees_SAMPLE.xlsx
+
+# ---- Runtime output ----
+logs/*
+!logs/.gitkeep
+data/*
+!data/.gitkeep
+STOP
+*.lock
+*.db
+*.db-wal
+*.db-shm
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
